@@ -31,8 +31,10 @@ if (Test-Path $scriptPath) {
 # Test 2: Check script syntax
 Write-Host "`nTest 2: Validate PowerShell syntax..." -ForegroundColor Yellow
 try {
+    # Use the modern AST-based parser for better accuracy
     $errors = $null
-    $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content -Path $scriptPath -Raw), [ref]$errors)
+    $warnings = $null
+    $null = [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$null, [ref]$errors)
     
     if ($errors.Count -eq 0) {
         Write-Host "  [PASS] No syntax errors found" -ForegroundColor Green

@@ -97,13 +97,16 @@ try {
     $acl = Get-Acl -Path $Path
     
     # Get all existing access rules (users and groups with permissions)
+    # First, try to get explicit (non-inherited) permissions
     $existingIdentities = $acl.Access | 
         Where-Object { $_.IsInherited -eq $false } | 
         Select-Object -ExpandProperty IdentityReference -Unique
     
+    # If no explicit permissions found, include inherited ones
+    # This ensures we can grant permissions even on folders that only have inherited ACLs
     if ($existingIdentities.Count -eq 0) {
         Write-Host "`n[WARNING] No explicit (non-inherited) permissions found on the folder." -ForegroundColor Yellow
-        Write-Host "Getting all identities including inherited ones..." -ForegroundColor Yellow
+        Write-Host "Including inherited permissions to ensure Full Control can be granted..." -ForegroundColor Yellow
         
         $existingIdentities = $acl.Access | 
             Select-Object -ExpandProperty IdentityReference -Unique
