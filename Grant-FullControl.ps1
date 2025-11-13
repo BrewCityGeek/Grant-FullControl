@@ -10,7 +10,7 @@ param(
 )
 
 # Function to write output that respects Silent mode
-function Write-Output {
+function Write-Log {
     param(
         [string]$Message,
         [string]$Color = "White",
@@ -38,42 +38,42 @@ function Write-Output {
 
 # Check if folder exists
 if (-not (Test-Path $FolderPath)) {
-    Write-Output "Folder '$FolderPath' does not exist!" -IsError
+    Write-Log "Folder '$FolderPath' does not exist!" -IsError
     exit 1
 }
 
-Write-Output "Modifying permissions for: $FolderPath" -Color Cyan
-Write-Output "This will grant Full Control to all currently assigned users and groups." -Color Yellow
-Write-Output "Permissions will be applied recursively to ALL subfolders and files." -Color Yellow
-Write-Output ""
+Write-Log "Modifying permissions for: $FolderPath" -Color Cyan
+Write-Log "This will grant Full Control to all currently assigned users and groups." -Color Yellow
+Write-Log "Permissions will be applied recursively to ALL subfolders and files." -Color Yellow
+Write-Log ""
 
 # Get current ACL
 try {
     $acl = Get-Acl -Path $FolderPath
-    Write-Output "Current permissions:" -Color Green
+    Write-Log "Current permissions:" -Color Green
     
     # Display current permissions
     foreach ($access in $acl.Access) {
         $identity = $access.IdentityReference
         $rights = $access.FileSystemRights
         $type = $access.AccessControlType
-        Write-Output "  $identity : $rights ($type)" -Color Gray
+        Write-Log "  $identity : $rights ($type)" -Color Gray
     }
     
-    Write-Output ""
+    Write-Log ""
     
     # Confirm action (skip if Force or Silent is used)
     if (-not $Force -and -not $Silent) {
         $confirm = Read-Host "Do you want to grant Full Control to all these users/groups on the folder AND all its contents recursively? (Y/N)"
         if ($confirm -notmatch '^[Yy]') {
-            Write-Output "Operation cancelled." -Color Yellow
+            Write-Log "Operation cancelled." -Color Yellow
             exit 0
         }
     } elseif ($Force -or $Silent) {
-        Write-Output "Proceeding automatically (Force/Silent mode)..." -Color Yellow
+        Write-Log "Proceeding automatically (Force/Silent mode)..." -Color Yellow
     }
     
-    Write-Output "Updating permissions..." -Color Cyan
+    Write-Log "Updating permissions..." -Color Cyan
     
     # Create new ACL with updated permissions
     $newAcl = Get-Acl -Path $FolderPath
@@ -101,21 +101,21 @@ try {
             
             # Add the rule to the ACL
             $newAcl.SetAccessRule($accessRule)
-            Write-Output "  ✓ Granted Full Control to: $identity" -Color Green
+            Write-Log "  [OK] Granted Full Control to: $identity" -Color Green
             
         } catch {
-            Write-Output "Failed to set permissions for $identity : $($_.Exception.Message)" -IsWarning
+            Write-Log "Failed to set permissions for $identity : $($_.Exception.Message)" -IsWarning
         }
     }
     
     # Apply the new ACL to the main folder
     Set-Acl -Path $FolderPath -AclObject $newAcl
     
-    Write-Output ""
-    Write-Output "Main folder permissions updated successfully!" -Color Green
+    Write-Log ""
+    Write-Log "Main folder permissions updated successfully!" -Color Green
     
     # Apply permissions recursively to all subfolders and files
-    Write-Output "Applying permissions recursively to all subfolders and files..." -Color Cyan
+    Write-Log "Applying permissions recursively to all subfolders and files..." -Color Cyan
     
     $itemCount = 0
     $errorCount = 0
@@ -149,46 +149,46 @@ try {
             Set-Acl -Path $_.FullName -AclObject $itemAcl
             
             if ($itemCount % 100 -eq 0) {
-                Write-Output "  Processed $itemCount items..." -Color Gray
+                Write-Log "  Processed $itemCount items..." -Color Gray
             }
             
         } catch {
             $errorCount++
-            Write-Output "Failed to set permissions for '$($_.FullName)': $($_.Exception.Message)" -IsWarning
+            Write-Log "Failed to set permissions for '$($_.FullName)': $($_.Exception.Message)" -IsWarning
         }
     }
     
-    Write-Output ""
-    Write-Output "Recursive permission update completed!" -Color Green
-    Write-Output "  Total items processed: $itemCount" -Color Gray
+    Write-Log ""
+    Write-Log "Recursive permission update completed!" -Color Green
+    Write-Log "  Total items processed: $itemCount" -Color Gray
     if ($errorCount -gt 0) {
-        Write-Output "  Items with errors: $errorCount" -Color Yellow
+        Write-Log "  Items with errors: $errorCount" -Color Yellow
     }
-    Write-Output ""
+    Write-Log ""
     
     # Display updated permissions
     $updatedAcl = Get-Acl -Path $FolderPath
-    Write-Output "Updated permissions:" -Color Green
+    Write-Log "Updated permissions:" -Color Green
     foreach ($access in $updatedAcl.Access) {
         $identity = $access.IdentityReference
         $rights = $access.FileSystemRights
         $type = $access.AccessControlType
         $inherited = if ($access.IsInherited) { " (Inherited)" } else { "" }
-        Write-Output "  $identity : $rights ($type)$inherited" -Color Gray
+        Write-Log "  $identity : $rights ($type)$inherited" -Color Gray
     }
     
 } catch {
-    Write-Output "Failed to modify permissions: $($_.Exception.Message)" -IsError
-    Write-Output "Make sure you're running this script as Administrator." -Color Yellow
+    Write-Log "Failed to modify permissions: $($_.Exception.Message)" -IsError
+    Write-Log "Make sure to run this script as Administrator." -Color Yellow
     exit 1
 }
 
-Write-Output ""
-Write-Output "Script completed successfully." -Color Cyan
+Write-Log ""
+Write-Log "Script completed successfully." -Color Cyan
 
 # Exit with appropriate code
 if ($errorCount -gt 0) {
-    Write-Output "Script completed with $errorCount errors. Check the log for details." -Color Yellow
+    Write-Log "Script completed with $errorCount errors. Check the log for details." -Color Yellow
     exit 1
 } else {
     exit 0
